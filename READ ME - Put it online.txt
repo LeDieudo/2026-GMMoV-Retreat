@@ -1,0 +1,21 @@
+GLORIOUS MEN'S RETREAT 2026 - PHONE APP (Android and iPhone)
+
+This folder is the app. Put it on the internet once and everyone opens it from one link.
+
+1. Upload this whole folder to a free web host that gives you an https link. The easiest:
+   Netlify - sign up free at netlify.com, then drag this folder onto the Deploy area. (Create the free account so the site is kept.)
+   Cloudflare Pages or GitHub Pages also work.
+2. Open the link on your phone and test it.
+3. Share the link in the WhatsApp group.
+
+Participants:
+- Android (Chrome): tap "Install the app" at the top of the app.
+- iPhone (Safari): tap Share, then Add to Home Screen.
+After that it opens from the home screen with the icon, in one tap, and keeps working without signal.
+
+Connecting the data collection:
+1. Follow "SETUP - read me first.txt" in the backend folder to get your Web app URL.
+2. Open config.js here, paste the URL after BACKEND_URL, save, and upload the folder again.
+
+Changing the program: edit the Program tab in the Google Sheet. The app updates by itself.
+After uploading a changed folder, change gmr26-v2 to gmr26-v3 in sw.js so phones fetch the new files.
