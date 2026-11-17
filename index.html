@@ -253,6 +253,7 @@ h3{font-size:20px}
 .dots i{background:var(--line-strong);opacity:.5}
 .dots i.on{opacity:1;width:22px;border-radius:6px}
 .pager{border-radius:0}
+.menu{display:block;margin-top:6px;font-size:13.5px;line-height:1.45;color:var(--muted,#4A5578)}.menu b{color:var(--ink,#0B1633)}.mnh{margin:10px 0 2px;font-weight:800}.mni{margin:0 0 6px}
 /* Free Netlify hosting overlays a badge bottom-right: lift the bars above it */
 html.nl .tabs{bottom:58px}html.nl .pager{bottom:calc(132px + env(safe-area-inset-bottom,0px))}html.nl .stack{padding-bottom:190px}
 .tlist li{padding:11px 0}
@@ -935,7 +936,7 @@ function viewNow(t){
     P0=(liveS?liveCard(liveS,t):welcome+themeHTML())+(nextS?nextCard(nextS,t,'Up next'):'');
     P2=laterList(t)+reflectCard(t);
   }
-  var P3=flyerHTML()+'<section class="card"><p class="verse">“Behold, how good and pleasant it is when brothers dwell together in unity.”</p><p class="eyebrow">Psalm 133:1</p></section>'+
+  var P3=flyerHTML()+menuCard()+'<section class="card"><p class="verse">“Behold, how good and pleasant it is when brothers dwell together in unity.”</p><p class="eyebrow">Psalm 133:1</p></section>'+
     '<section class="card"><p class="eyebrow">Venue</p><h3>Mannah Executive Guestlodge</h3><p>39 Pomona Rd, Pomona,<br>Kempton Park, 1610</p><a class="link" href="https://www.google.com/maps/search/?api=1&query=Mannah+Executive+Guestlodge+39+Pomona+Rd+Pomona+Kempton+Park+1610" target="_blank" rel="noopener">Open in Maps</a>'+(BOOKING?'<a class="btn btn-gold" href="'+esc(BOOKING)+'" target="_blank" rel="noopener">Book your spot</a>':'')+'<p class="eyebrow">Enquiries</p><div class="phones"><a href="tel:+27727558421">+27 727558421</a><a href="tel:+27810939259">+27 810939259</a></div></section>'+
     installCard()+
     '<details class="card"><summary>Try the app before the retreat</summary><div class="dbody"><p class="small">Pick a moment to see how the app looks during the weekend. Reflections you save while previewing stay in your notes, and you can clear them from My Notes.</p><label class="lab" for="pv">Pretend it is</label><select id="pv" class="sel">'+PREVIEWS.map(function(p,idx){return '<option value="'+idx+'"'+(p[1]===preview?' selected':'')+'>'+esc(p[0])+'</option>';}).join('')+'</select></div></details>';
@@ -945,6 +946,17 @@ function viewNow(t){
 }
 
 /* ---------- Program ---------- */
+/* Meal menus (shown on the meal rows of the program and on the last Home page). Breakfast: add here when known. */
+var MENUS=[
+ {day:20,re:/^dinner/i,name:'Friday dinner',items:['Chicken schnitzel','Beef stew','Rice or pap','Gravy','Noodle salad','Three bean salad','Ice cream']},
+ {day:21,re:/^lunch/i,name:'Saturday lunch buffet',items:['Pap','Rice','Gravy','Springbok stew','Drumsticks','Mixed vegetables','Pasta salad','Malva dessert and custard']}
+];
+function menuFor(it){if(!it||it.type!=='meal')return null;for(var i=0;i<MENUS.length;i++){if(MENUS[i].day===it.day&&MENUS[i].re.test(it.title))return MENUS[i];}return null;}
+function menuCard(){
+  return '<section class="card"><p class="eyebrow">Meals</p><h3>On the menu</h3>'+MENUS.map(function(m){
+    return '<p class="mnh">'+esc(m.name)+'</p><p class="mni">'+m.items.map(esc).join(' · ')+'</p>';}).join('')+
+    '<p class="small">Tell the organisers about any allergy when you check in.</p></section>';
+}
 function rowHTML(it,t){
   var live=isLive(it,t),past=isPast(it,t),st=live?'live':past?'past':'future';
   var r=S.refl[it.label],act='',attr='',tag='div';
@@ -955,7 +967,7 @@ function rowHTML(it,t){
   var pill=live?'<span class="pill sm"><span class="dot"></span>Now</span>':'';
   var tm=it.timed?'<span class="t1">'+clock(it.s)+'</span>'+(it.en&&it.e>it.s?'<span class="t2">'+clock(it.e)+'</span>':''):'<span class="t1">TBC</span>';
   return '<li class="'+st+'"><'+tag+' class="row" '+attr+'><span class="tm">'+tm+'</span>'+
-    '<span class="bd">'+eb(it)+'<span class="rt">'+esc(it.title)+'</span>'+lines(it)+'</span>'+
+    '<span class="bd">'+eb(it)+'<span class="rt">'+esc(it.title)+'</span>'+lines(it)+(menuFor(it)?'<span class="menu"><b>Menu:</b> '+menuFor(it).items.map(esc).join(' · ')+'</span>':'')+'</span>'+
     '<span class="ac">'+pill+(tableOfItem(it)?'<span class="chip tbl">Table '+tableOfItem(it)+'</span>':'')+act+'</span></'+tag+'></li>';
 }
 /* Host and speakers. Put each photo in the img folder with the file name below (JPG, square or portrait). Add the bio between the quotes. */
