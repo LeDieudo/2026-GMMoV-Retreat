@@ -439,13 +439,13 @@ var KEY='gmr26-v2', PKEY='gmr26-program', storageOk=true;
 function REP0(){return {ratings:{},best:'',improve:'',commit:'',again:'',name:'',inc:false};}
 function PRE0(){return {hope:[],theme:'',expect:'',learn:'',discover:'',heart:'',name:''};}
 function REG0(){return {first:'',last:'',phone:'',email:'',group:'',diet:'',emerg:'',emergPhone:'',consent:false,line:-1};}
-var S={pid:'',refl:{},rep:REP0(),pre:PRE0(),sent:{},outbox:[],reg:REG0(),tables:[],room:{room:'',mates:[],captain:'',day:false,found:false},err:{}};
+var S={pid:'',refl:{},rep:REP0(),pre:PRE0(),join:{q1:'',q2:'',name:'',phone:'',area:''},sent:{},outbox:[],reg:REG0(),tables:[],room:{room:'',mates:[],captain:'',day:false,found:false},err:{}};
 var preview=null, progDay=null, curKey=null, lastFocus=null, lastSig='', clearArmed=false, toastTimer=null, flushing=false, needTables=false;
 function load(){
   try{
     localStorage.setItem(KEY+'-t','1');localStorage.removeItem(KEY+'-t');
     var j=localStorage.getItem(KEY)||localStorage.getItem('gmr26-v1');
-    if(j){var o=JSON.parse(j);S.pid=o.pid||'';S.refl=o.refl||{};S.rep=Object.assign(REP0(),o.rep||{});S.pre=Object.assign(PRE0(),o.pre||{});S.sent=o.sent||{};S.outbox=Array.isArray(o.outbox)?o.outbox:[];S.reg=Object.assign(REG0(),o.reg||{});S.tables=Array.isArray(o.tables)?o.tables:[];S.room=Object.assign({room:'',mates:[],captain:'',day:false,found:false},o.room||{});if(!Array.isArray(S.room.mates))S.room.mates=[];S.err=o.err||{};if(!Array.isArray(S.pre.hope))S.pre.hope=[];}
+    if(j){var o=JSON.parse(j);S.pid=o.pid||'';S.refl=o.refl||{};S.rep=Object.assign(REP0(),o.rep||{});S.pre=Object.assign(PRE0(),o.pre||{});S.join=Object.assign({q1:'',q2:'',name:'',phone:'',area:''},o.join||{});S.sent=o.sent||{};S.outbox=Array.isArray(o.outbox)?o.outbox:[];S.reg=Object.assign(REG0(),o.reg||{});S.tables=Array.isArray(o.tables)?o.tables:[];S.room=Object.assign({room:'',mates:[],captain:'',day:false,found:false},o.room||{});if(!Array.isArray(S.room.mates))S.room.mates=[];S.err=o.err||{};if(!Array.isArray(S.pre.hope))S.pre.hope=[];}
     var pj=localStorage.getItem(PKEY);if(pj){var arr=JSON.parse(pj);if(Array.isArray(arr)&&arr.length)setProgram(arr);}
   }catch(e){storageOk=false;}
 }
@@ -570,18 +570,19 @@ function statusText(kind){
   return '';
 }
 function paintStatus(){
-  var a=$('#chk-status'),b=$('#rep-status'),c=$('#reg-status');
+  var a=$('#chk-status'),b=$('#rep-status'),c=$('#reg-status'),j=$('#join-status');
+  if(j)j.textContent=statusText('join');
   if(a)a.textContent=statusText('checkin');
   if(b)b.textContent=statusText('report');
   if(c)c.textContent=statusText('register');
 }
 async function sendKind(kind){
-  var ok=kind==='checkin'?hasPre():kind==='register'?regReady():!!S.rep.ratings.overall;
+  var ok=kind==='checkin'?hasPre():kind==='register'?regReady():kind==='join'?(joinReady()||joinNo()):!!S.rep.ratings.overall;
   if(!ok||!BACKEND)return;
-  var payload=kind==='checkin'?checkinPayload():kind==='register'?registerPayload():reportPayload();
+  var payload=kind==='checkin'?checkinPayload():kind==='register'?registerPayload():kind==='join'?joinPayload():reportPayload();
   S.outbox=S.outbox.filter(function(o){return o.kind!==kind;});
   S.outbox.push({kind:kind,payload:payload,at:Date.now()});save();
-  var el=$(kind==='checkin'?'#chk-status':kind==='register'?'#reg-status':'#rep-status');if(el)el.textContent='Sending...';
+  var el=$(kind==='checkin'?'#chk-status':kind==='register'?'#reg-status':kind==='join'?'#join-status':'#rep-status');if(el)el.textContent='Sending...';
   await flush();
   if(kind==='register'&&S.sent.register&&!S.err.register&&curView()==='register'){goStep(1);}
   else if(kind==='register'&&curView()==='register')render();
@@ -593,6 +594,79 @@ function reportPayload(){
   var r=S.rep;
   return {kind:'report',pid:pid(),name:r.name,ratings:r.ratings,best:r.best,improve:r.improve,commit:r.commit,again:r.again,
     reflections:SESS.filter(function(it){return hasRefl(S.refl[it.label]);}).map(function(it){var x=S.refl[it.label];return {session:it.label,rating:x.rating||0,stood:r.inc?(x.stood||''):'',action:r.inc?(x.action||''):''};})};
+}
+
+/* ---------- Stay connected: 3 questions at the end ---------- */
+var JOIN_THANKS='Thank you for attending the 2026 Annual GMMoV retreat. We hope to see you soon.';
+var JOIN_SUMMARY='The Glorious Mighty Man of Valor is a Global fellowship of men, who meet every month, to fellowship and strengthen one another. We look forward to hosting you in our next meeting. One of your brothers will contact you soon.';
+function joinReady(){var j=S.join;return j.q1==='Yes'&&j.q2==='Yes'&&!!(j.name||'').trim()&&!!(j.phone||'').trim();}
+function joinNo(){var j=S.join;return j.q1==='No'||(j.q1==='Yes'&&j.q2==='No');}
+function joinPayload(){var j=S.join;if(joinNo())return {kind:'join',pid:pid(),q1:j.q1,q2:j.q2};return {kind:'join',pid:pid(),name:(j.name||'').trim(),phone:(j.phone||'').trim(),area:(j.area||'').trim(),q1:j.q1,q2:j.q2};}
+function joinWAText(){var j=S.join;return 'GMMoV movement sign-up\nName & surname: '+(j.name||'')+'\nWhatsApp: '+(j.phone||'')+'\nNeighbourhood: '+(j.area||'');}
+function yn(key,val){return '<button type="button" data-jq="'+key+'" data-v="'+val+'" aria-pressed="'+String(S.join[key]===val)+'">'+val+'</button>';}
+function joinHTML(){
+  var j=S.join,h='<section class="card"><p class="eyebrow">Stay connected</p><h3>After the retreat</h3>';
+  h+='<p class="lab">1. Are you part of a Men’s group that effectively provides the spiritual, physical, mental, personal and professional support you need?</p><div class="seg two" role="group" aria-label="Part of a Men’s group">'+yn('q1','Yes')+yn('q1','No')+'</div>';
+  if(j.q1==='No'){return h+'<p class="verse">'+esc(JOIN_THANKS)+'</p></section>';}
+  if(j.q1==='Yes'){
+    h+='<p class="lab" style="margin-top:14px">2. Do you want to become a part of the Glorious Mighty Men of Valor movement?</p><div class="seg two" role="group" aria-label="Join the movement">'+yn('q2','Yes')+yn('q2','No')+'</div>';
+    if(j.q2==='No'){return h+'<p class="verse">'+esc(JOIN_THANKS)+'</p></section>';}
+    if(j.q2==='Yes'){
+      h+='<p class="lab" style="margin-top:14px">3. Your details</p>'+
+        '<label class="lab" for="j-name">Name &amp; surname</label><input id="j-name" class="inp" type="text" autocomplete="name" value="'+esc(j.name||'')+'">'+
+        '<label class="lab" for="j-phone">Contact (WhatsApp)</label><input id="j-phone" class="inp" type="tel" inputmode="tel" autocomplete="tel" value="'+esc(j.phone||'')+'">'+
+        '<label class="lab" for="j-area">Which neighbourhood do you live in?</label><input id="j-area" class="inp" type="text" value="'+esc(j.area||'')+'">'+
+        (BACKEND?'<button id="join-send" class="btn btn-gold" type="button"'+(joinReady()?'':' disabled aria-disabled="true"')+'>Send</button><p class="small" id="join-status" role="status"></p>'
+               :'<a id="join-wa" class="btn btn-gold" target="_blank" rel="noopener"'+(joinReady()?' href="https://wa.me/'+WA_NUMBER+'?text='+encodeURIComponent(joinWAText())+'"':' aria-disabled="true"')+'>Send on WhatsApp</a>');
+      if(S.sent.join&&!pending('join'))h+='<p class="verse">'+esc(JOIN_SUMMARY)+'</p>';
+    }
+  }
+  return h+'</section>';
+}
+function renderJoin(){var b=$('#join-box');if(b){b.innerHTML=joinHTML();paintStatus();}}
+function updateJoin(){
+  var ok=joinReady(),s=$('#join-send'),w=$('#join-wa');
+  if(s){s.disabled=!ok;s.setAttribute('aria-disabled',String(!ok));}
+  if(w){if(ok){w.href='https://wa.me/'+WA_NUMBER+'?text='+encodeURIComponent(joinWAText());w.setAttribute('aria-disabled','false');}else{w.removeAttribute('href');w.setAttribute('aria-disabled','true');}}
+}
+
+/* ---------- Commitment card (image the man can keep or share) ---------- */
+var cmUrl='';
+function cmText(){return (S.rep.commit||'').trim();}
+function cmName(){return ((S.rep.name||'').trim()||((S.reg.first||'')+' '+(S.reg.last||'')).trim());}
+function commitHTML(){
+  var t=cmText();
+  if(!t)return '<section class="card"><p class="eyebrow">My commitment card</p><p class="small">Write the step you commit to take this month above, and you can turn it into a card to keep or share.</p></section>';
+  return '<section class="card"><p class="eyebrow">My commitment card</p><p class="small">“'+esc(t)+'”</p><button id="cm-make" class="btn btn-gold" type="button">Make my commitment card</button><div id="cm-out">'+(cmUrl?'<img class="dlimg" src="'+cmUrl+'" alt="My commitment card"><p class="small">If nothing downloaded, press and hold the picture and choose Save image.</p>':'')+'</div></section>';
+}
+function renderCommit(){var b=$('#cm-box');if(b)b.innerHTML=commitHTML();}
+function makeCommitCard(){
+  var W=1080,H=1350,pad=90,t=cmText(),nm=cmName();
+  var c=document.createElement('canvas');c.width=W;c.height=H;var ctx=c.getContext('2d');
+  var g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,'#0B1633');g.addColorStop(1,'#16255A');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#F5B21F';ctx.fillRect(pad,150,120,8);
+  ctx.font='700 32px Arial, sans-serif';ctx.fillText('MY COMMITMENT THIS MONTH',pad,230);
+  var size=84,ls;
+  for(;size>=40;size-=4){ctx.font='800 '+size+'px Arial, sans-serif';ls=wrapLines(ctx,'“'+t+'”',W-2*pad);if(ls.length*(size*1.22)<=620)break;}
+  ctx.fillStyle='#ffffff';var y=360;ls.forEach(function(l){ctx.fillText(l,pad,y);y+=size*1.22;});
+  y=Math.max(y+40,1000);
+  if(nm){ctx.fillStyle='#F5B21F';ctx.font='700 44px Arial, sans-serif';ctx.fillText('— '+nm,pad,y);y+=70;}
+  ctx.fillStyle='#cdd5ee';ctx.font='400 32px Arial, sans-serif';
+  ctx.fillText('I attended the 2026 Annual GMMoV Retreat',pad,H-190);
+  ctx.fillText('Faith Bible Church South Africa · 20–21 November',pad,H-140);
+  ctx.font='italic 400 30px Arial, sans-serif';ctx.fillText('The man: Leader · Lover · Father',pad,H-90);
+  return c;
+}
+function downloadCommit(){
+  var c;try{c=makeCommitCard();}catch(e){toast('Could not make the card on this phone');return;}
+  function finish(url){
+    cmUrl=url;var out=$('#cm-out');
+    if(out)out.innerHTML='<img class="dlimg" src="'+url+'" alt="My commitment card"><p class="small">If nothing downloaded, press and hold the picture and choose Save image.</p>';
+    try{var a=document.createElement('a');a.href=url;a.download='My-Commitment-Card.png';a.style.display='none';document.body.appendChild(a);a.click();document.body.removeChild(a);}catch(e){}
+    toast('Card saved. Check your downloads or photos');
+  }
+  if(c.toBlob){c.toBlob(function(b){if(b)finish(URL.createObjectURL(b));else finish(c.toDataURL('image/png'));},'image/png');}
+  else finish(c.toDataURL('image/png'));
 }
 var NOTICE='<p class="small">Sending shares your answers with the organisers at Faith Bible Church South Africa. Leave your name blank to stay anonymous.</p>';
 
@@ -930,7 +1004,7 @@ function viewNow(t){
     P0=welcome+themeHTML()+'<section class="card"><p class="eyebrow">The retreat begins in</p><div class="cd"><div><b>'+d+'</b><span>days</span></div><div><b>'+P(hr)+'</b><span>hours</span></div><div><b>'+P(mn)+'</b><span>min</span></div></div><p class="small">Friday 20 November, 15:00 \u00b7 Mannah Executive Guestlodge</p></section>';
     P2=checkinCard();
   }else if(t>=LAST){
-    P0='<section class="card thanks"><p class="eyebrow">Retreat complete</p><h2 class="serif">Thank you, brothers.</h2><p>Take five minutes to give your overall report. It helps the organisers plan what comes next.</p><a class="btn btn-gold" href="#report">Give my overall report</a><a class="btn btn-ghost" href="#notes">Review my notes</a></section>';
+    P0='<section class="card thanks"><p class="eyebrow">Retreat complete</p><h2 class="serif">Thank you, brothers.</h2><p>Take five minutes to give your overall report. It helps the organisers plan what comes next.</p><a class="btn btn-gold" href="#report">Give my overall report</a><a class="btn btn-ghost" href="#report">Join the movement</a><a class="btn btn-ghost" href="#notes">Review my notes</a></section>';
     P2='<section class="card"><p class="eyebrow">My notes</p><p>Your reflections stay on this phone.</p><a class="btn btn-ghost" href="#notes">Review my notes</a></section>';
   }else{
     P0=(liveS?liveCard(liveS,t):welcome+themeHTML())+(nextS?nextCard(nextS,t,'Up next'):'');
@@ -1108,7 +1182,7 @@ function viewReport(){
   h+='<section class="card"><p class="eyebrow">What the retreat set out to do</p><p class="small">One tap each. Skip any you prefer.</p>'+GOALS.map(function(g){return '<div class="goal"><p class="lab">'+g[1]+'</p>'+starsHTML('rep',g[0],g[1],'sm')+'</div>';}).join('')+'<div class="goal"><p class="lab">Venue, meals and hospitality</p>'+starsHTML('rep','venue','Venue, meals and hospitality','sm')+'</div><div class="goal"><p class="lab">Met what I came for</p>'+starsHTML('rep','met','Met what I came for','sm')+'</div></section>';
   h+='<section class="card"><p class="eyebrow">Part 2 of 3 · A few words · about 2 minutes, all optional</p><label class="lab" for="r-best">The most impactful moment for me</label><textarea id="r-best" class="ta" rows="2" placeholder="One sentence is enough"></textarea><label class="lab" for="r-improve">What could be better next time</label><textarea id="r-improve" class="ta" rows="2" placeholder="One sentence is enough"></textarea><label class="lab" for="r-commit">The step I commit to take this month</label><input id="r-commit" class="inp" type="text" maxlength="200" placeholder="A short line"></section>';
   h+='<section class="card"><p class="eyebrow">Part 3 of 3 · Finish · 30 seconds</p><p class="lab">Would you attend again?</p><div class="seg" role="group" aria-label="Would you attend again"><button type="button" data-again="Yes" aria-pressed="false">Yes</button><button type="button" data-again="Maybe" aria-pressed="false">Maybe</button><button type="button" data-again="No" aria-pressed="false">No</button></div><label class="lab" for="r-name">Your name (optional)</label><input id="r-name" class="inp" type="text" autocomplete="name" placeholder="Leave blank to stay anonymous"><label class="check" for="r-inc"><input id="r-inc" type="checkbox"><span>Include my written session notes</span></label></section>';
-  h+='<section class="card"><p class="eyebrow">Your report</p><div id="rep-preview" class="preview" tabindex="0" aria-label="Report preview"></div>'+sendButtons('rep','report')+'</section></div>';
+  h+='<section class="card"><p class="eyebrow">Your report</p><div id="rep-preview" class="preview" tabindex="0" aria-label="Report preview"></div>'+sendButtons('rep','report')+'</section><div id="cm-box"></div><div id="join-box"></div></div>';
   return h;
 }
 function fillReport(){
@@ -1129,7 +1203,7 @@ function render(){
   var v=curView(),t=now(),m=$('#view');
   m.innerHTML=v==='program'?viewProgram(t):v==='notes'?viewNotes(t):v==='report'?viewReport(t):v==='checkin'?viewCheckin():v==='register'?viewRegister():viewNow(t);
   document.querySelectorAll('.tab').forEach(function(a){if(a.dataset.tab===v)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});
-  if(v==='report'){fillReport();paintStars();updateReport();}
+  if(v==='report'){fillReport();paintStars();updateReport();renderCommit();renderJoin();}
   if(v==='checkin'){fillCheckin();updateCheckin();}
   if(v==='register'){fillRegister();updateReg();}
   lastSig=v+'|'+Math.floor(t/60000);
@@ -1201,12 +1275,15 @@ document.addEventListener('click',function(e){
   if(el.closest('#reg-send')){var rb=el.closest('#reg-send');if(!rb.disabled)regSend();return;}
   if(el.closest('#chk-send')){sendKind('checkin');return;}
   if(el.closest('#rep-send')){sendKind('report');return;}
+  if(el.closest('#cm-make')){downloadCommit();return;}
+  if(el.closest('#join-send')){sendKind('join').then(renderJoin);return;}
+  var jq=el.closest('[data-jq]');if(jq){var k=jq.dataset.jq,v=jq.dataset.v;S.join[k]=S.join[k]===v?'':v;if(k==='q1'&&S.join.q1!=='Yes')S.join.q2='';if(!S.join.name&&S.reg.first)S.join.name=((S.reg.first||'')+' '+(S.reg.last||'')).trim();if(!S.join.phone&&S.reg.phone)S.join.phone=S.reg.phone;save();renderJoin();if(joinNo())sendKind('join');return;}
   if(el.closest('#chk-copy')){copyText(preText()).then(function(ok){toast(ok?'Check-in copied':'Could not copy. Select the text and copy it.');});return;}
   if(el.closest('#rep-copy')){copyText(reportText()).then(function(ok){toast(ok?'Report copied':'Could not copy. Select the text and copy it.');});return;}
   if(el.closest('#notes-copy')){var b=el.closest('#notes-copy');if(b.disabled)return;copyText(notesText()).then(function(ok){toast(ok?'Notes copied':'Could not copy on this browser');});return;}
   if(el.closest('#clear')){
     if(!clearArmed){clearArmed=true;render();setTimeout(function(){if(clearArmed){clearArmed=false;if(curView()==='notes')render();}},5000);}
-    else{var keep=S.pid;S={pid:keep,refl:{},rep:REP0(),pre:PRE0(),sent:{},outbox:[],reg:REG0(),tables:[],err:{}};save();clearArmed=false;render();toast('Cleared');}
+    else{var keep=S.pid;S={pid:keep,refl:{},rep:REP0(),pre:PRE0(),join:{q1:'',q2:'',name:'',phone:'',area:''},sent:{},outbox:[],reg:REG0(),tables:[],err:{}};save();clearArmed=false;render();toast('Cleared');}
     return;
   }
 });
@@ -1221,13 +1298,15 @@ function onField(e){
   var gm={'g-first':'first','g-last':'last','g-phone':'phone','g-email':'email','g-group':'group','g-diet':'diet','g-emerg':'emerg','g-emerg-phone':'emergPhone'};
   if(gm[id]){S.reg[gm[id]]=e.target.value;save();updateReg();return;}
   if(id==='g-consent'){S.reg.consent=e.target.checked;save();updateReg();return;}
+  var jm={'j-name':'name','j-phone':'phone','j-area':'area'};
+  if(jm[id]){S.join[jm[id]]=e.target.value;save();updateJoin();return;}
   var pm={'c-expect':'expect','c-learn':'learn','c-discover':'discover','c-heart':'heart','c-name':'name'};
   if(pm[id]){S.pre[pm[id]]=e.target.value;save();updateCheckin();return;}
   if(id==='rf-stood'||id==='rf-action'){
     if(!curKey)return;var r=getR(curKey);r[id==='rf-stood'?'stood':'action']=e.target.value;r.updated=Date.now();save();sheetStatus();return;
   }
   var map={'r-best':'best','r-improve':'improve','r-commit':'commit','r-name':'name'};
-  if(map[id]){S.rep[map[id]]=e.target.value;save();updateReport();}
+  if(map[id]){S.rep[map[id]]=e.target.value;save();updateReport();if(id==='r-commit'||id==='r-name'){cmUrl='';var cb=$('#cm-box');if(cb&&!!cmText()!==!!cb.querySelector('#cm-make'))renderCommit();else if(cb&&cb.querySelector('#cm-out')){var o=$('#cm-out');if(o)o.innerHTML='';var q=cb.querySelector('.small');if(q)q.textContent='“'+cmText()+'”';}}}
   else if(id==='r-inc'){S.rep.inc=e.target.checked;save();updateReport();}
 }
 document.addEventListener('input',onField);
